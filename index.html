@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSON Display</title>
+  <style>
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+    }
+    .flex-container {
+      display: flex;
+      justify-content: space-between;
+    }
+    .select-box {
+      width: 150px;
+      height: 100px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="flex-container">
+  <div>
+    <label for="fileInput">Upload JSON File:</label>
+    <input type="file" id="fileInput" accept=".json">
+  </div>
+
+  <div>
+    <label for="availableFields">Available Fields:</label>
+    <select id="availableFields" multiple class="select-box">
+      <option value="subcategory">Subcategory</option>
+      <option value="title" selected>Title</option>
+      <option value="price" selected>Price</option>
+      <option value="popularity" selected>Popularity</option>
+    </select>
+  </div>
+
+  <div>
+    <button onclick="moveOptions('availableFields', 'displayFields')"> >></button>
+    <button onclick="moveOptions('displayFields', 'availableFields')"> <<</button>
+  </div>
+
+  <div>
+    <label for="displayFields">Fields to Display:</label>
+    <select id="displayFields" multiple class="select-box"></select>
+  </div>
+</div>
+
+<table id="dataTable">
+  <!-- Table content will be dynamically added here -->
+</table>
+
+<script>
+  // Function to move selected options between two select boxes
+  function moveOptions(sourceId, targetId) {
+    const sourceSelect = document.getElementById(sourceId);
+    const targetSelect = document.getElementById(targetId);
+
+    Array.from(sourceSelect.options).forEach(option => {
+      if (option.selected) {
+        targetSelect.appendChild(option.cloneNode(true));
+        option.remove();
+      }
+    });
+
+    // Display table only if there are selected fields
+    const displayFields = document.getElementById('displayFields');
+    const table = document.getElementById('dataTable');
+
+    if (displayFields.options.length > 0) {
+      const selectedColumns = Array.from(displayFields.options).map(option => option.value);
+      displayTable(selectedColumns);
+      table.style.display = 'block';
+    } else {
+      table.style.display = 'none';
+    }
+  }
+
+  // Function to display selected columns in the table
+  function displayTable(selectedColumns) {
+    jsonData = JSON.parse(localStorage.getItem('jsonData'))
+    const table = document.getElementById('dataTable');
+    table.innerHTML = '';
+
+    // Create table header
+    const headerRow = table.insertRow(0);
+    selectedColumns.forEach(column => {
+      const th = document.createElement('th');
+      th.textContent = column.charAt(0).toUpperCase() + column.slice(1); // Capitalize first letter
+      headerRow.appendChild(th);
+    });
+
+    // Sort the data based on descending popularity
+    const sortedData = Object.entries(jsonData.products)
+      .sort(([, a], [, b]) => b.popularity - a.popularity)
+      .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+
+    // Create table rows with sorted data
+    for (const productId in sortedData) {
+      const product = sortedData[productId];
+      const row = table.insertRow();
+
+      selectedColumns.forEach(column => {
+        const cell = row.insertCell();
+        cell.textContent = product[column];
+      });
+    }
+  }
+  
+  // Event listener for file input change
+  document.getElementById('fileInput').addEventListener('change', function () {
+    const fileInput = this;
+    const file = fileInput.files[0];
+
+    if (file) {
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        try {
+          const jsonData = JSON.parse(e.target.result);
+          localStorage.setItem('jsonData',JSON.stringify(jsonData))
+          const initialColumns = Array.from(document.getElementById('availableFields').options).map(option => option.value);
+          displayTable(initialColumns);
+        } catch (error) {
+          console.error('Error parsing JSON file:', error);
+        }
+      };
+
+      reader.readAsText(file);
+    }
+  });
+
+  // Event listener for column selection change
+  document.getElementById('displayFields').addEventListener('change', function () {
+    const displayFields = this;
+    const table = document.getElementById('dataTable');
+
+    if (displayFields.options.length > 0) {
+      const selectedColumns = Array.from(displayFields.options).map(option => option.value);
+      displayTable(selectedColumns);
+      table.style.display = 'block';
+    } else {
+      table.style.display = 'none';
+    }
+  });
+</script>
+
+</body>
+</html>
